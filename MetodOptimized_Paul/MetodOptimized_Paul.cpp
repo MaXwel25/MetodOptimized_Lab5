@@ -213,15 +213,15 @@ int main() {
     long double eps1 = 0.1, eps2 = 0.15;
     int M = 10;
 
-    vector<double> solution = dfp_method(x1_0, x2_0, eps1, eps2, M);
+    vector<double> result = dfp_method(x1_0, x2_0, eps1, eps2, M);
 
     // вывод результатов
     cout << "\nИтоговые результаты:\n";
-    cout << "Точка минимума: (" << solution[0]
-        << ", " << solution[1] << ")\n";
-    cout << "Значение функции: " << main_function(solution[0], solution[1]) << endl;
+    cout << "Точка минимума: (" << result[0]
+        << ", " << result[1] << ")\n";
+    cout << "Значение функции: " << main_function(result[0], result[1]) << endl;
 
-    vector<double> final_grad = gradient(solution[0], solution[1]);
+    vector<double> final_grad = gradient(result[0], result[1]);
     cout << "Градиент: (" << final_grad[0]
         << ", " << final_grad[1] << ")" << endl;
     cout << "Норма градиента: " << norma(final_grad) << endl;
