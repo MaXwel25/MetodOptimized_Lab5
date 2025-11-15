@@ -1,238 +1,210 @@
 ﻿#include <iostream>
-#include <cmath>
-#include <iomanip>
 #include <vector>
-
+#include <cmath>
+#include <functional>
 using namespace std;
 
-// главная функция f(x) = x1^2 + 6*x2^2 + x1*x2 + x1
-long double main_function(double x1, double x2) {
-    return x1 * x1 + 6 * x2 * x2 + x1 * x2 + x1;
-}
+// целевая функция: f(x) = x1^2 + 6x2^2 + x1x2 + x1
+double main_function(const vector<double>& x) {
+    return x[0] * x[0] + 6 * x[1] * x[1] + x[0] * x[1] + x[0];
+} 
 
-vector<double> gradient(double x1, double x2) {
-    return { 2 * x1 + x2 + 1, 12 * x2 + x1 };
-}
+// одномерный поиск методом золотого сечения
+double golden_section(const function<double(const vector<double>&)>& func,
+    const vector<double>& x0,
+    const vector<double>& direction,
+    double a = -1.0, double b = 1.0) {
+    const double phi = (sqrt(5.0) - 1.0) / 2.0;
+    const double eps = 1e-8;
+    int n = x0.size();
 
-// норма вектора
-long double norma(const vector<double>& v) {
-    return sqrt(v[0] * v[0] + v[1] * v[1]);
-}
+    double c = b - phi * (b - a);
+    double d = a + phi * (b - a);
 
-// умножение матрицы 2x2 на вектор
-vector<double> mat_vec_mult(const vector<vector<double>>& A, const vector<double>& v) {
-    return {
-        A[0][0] * v[0] + A[0][1] * v[1],
-        A[1][0] * v[0] + A[1][1] * v[1]
-    };
-}
+    auto pointAlongDirection = [&](double lambda) {
+        vector<double> x = x0;
+        for (int i = 0; i < n; i++) {
+            x[i] += lambda * direction[i];
+        }
+        return func(x);
+        };
 
-// внешнее произведение векторов
-vector<vector<double>> outer_product(const vector<double>& u, const vector<double>& v) {
-    return {
-        {u[0] * v[0], u[0] * v[1]},
-        {u[1] * v[0], u[1] * v[1]}
-    };
-}
+    double fc = pointAlongDirection(c);
+    double fd = pointAlongDirection(d);
 
-// сложение матриц
-vector<vector<double>> matrix_add(const vector<vector<double>>& A, const vector<vector<double>>& B) {
-    return {
-        {A[0][0] + B[0][0], A[0][1] + B[0][1]},
-        {A[1][0] + B[1][0], A[1][1] + B[1][1]}
-    };
-}
-
-// вычитание матриц
-vector<vector<double>> matrix_sub(const vector<vector<double>>& A, const vector<vector<double>>& B) {
-    return {
-        {A[0][0] - B[0][0], A[0][1] - B[0][1]},
-        {A[1][0] - B[1][0], A[1][1] - B[1][1]}
-    };
-}
-
-// умножение матрицы на скаляр
-vector<vector<double>> matrix_scale(const vector<vector<double>>& A, double s) {
-    return {
-        {A[0][0] * s, A[0][1] * s},
-        {A[1][0] * s, A[1][1] * s}
-    };
-}
-
-// скалярное произведение
-double skalar(const vector<double>& u, const vector<double>& v) {
-    return u[0] * v[0] + u[1] * v[1];
-}
-
-// метод золотого сечения для одномерной минимизации (для 11 шага)
-double golden_section(double x1, double x2, const vector<double>& direction,
-    double a, double b, double eps = 1e-8) {
-    const double phi = (1.0 + sqrt(5.0)) / 2.0;
-    double x1_val, x2_val;
-
-    while (fabs(b - a) > eps) {
-        x1_val = b - (b - a) / phi;
-        x2_val = a + (b - a) / phi;
-        double f1 = main_function(x1 + x1_val * direction[0], x2 + x1_val * direction[1]);
-        double f2 = main_function(x1 + x2_val * direction[0], x2 + x2_val * direction[1]);
-        if (f1 > f2) {
-            a = x1_val;
+    while (abs(b - a) > eps) {
+        if (fc < fd) {
+            b = d;
+            d = c;
+            fd = fc;
+            c = b - phi * (b - a);
+            fc = pointAlongDirection(c);
         }
         else {
-            b = x2_val;
+            a = c;
+            c = d;
+            fc = fd;
+            d = a + phi * (b - a);
+            fd = pointAlongDirection(d);
         }
     }
-
     return (a + b) / 2.0;
 }
 
-// метод Дэвидона-Флетчера-Пауэлла
-vector<double> dfp_method(double x1_0, double x2_0, double eps1 = 0.1, double eps2 = 0.15, int M = 10) {
-    // 1/2) инициализация
-    vector<double> x = { x1_0, x2_0 };
-    vector<vector<double>> A = { {1.0, 0.0}, {0.0, 1.0} }; // A^0 = E
-    int k = 0;
-    vector<double> x_prev_iter = x;
-    vector<double> grad_prev;
-    vector<double> x_prev = x;
-    double f_prev = main_function(x[0], x[1]);
-    cout << "Метод Дэвидона-Флетчера-Пауэлла\n";
-    cout << "Функция: f(x1, x2) = x1^2 + 6*x2^2 + x1*x2 + x1" << endl;
-    cout << "Начальная точка: (" << x[0] << ", " << x[1] << ")" << endl;
-    cout << "f(x0) = " << f_prev << endl;
-    cout << "Параметры: e1 = " << eps1 << ", e2 = " << eps2 << ", M = " << M << "\n\n";
+// нормализация вектора
+vector<double> normal(const vector<double>& v) {
+    int n = v.size();
+    double norm = 0.0;
+    for (double val : v) {
+        norm += val * val;
+    }
+    norm = sqrt(norm);
 
-    while (true) {
-        // 3) вычислить градиент
-        vector<double> grad = gradient(x[0], x[1]);
+    if (norm < 1e-12) return v;
 
-        // 4) проверяем критерий окончания
-        double grad_norm = norma(grad);
-        cout << "Итерация " << k << ":\n";
-        cout << "x = (" << setprecision(6) << x[0] << ", " << x[1] << ")\n";
-        cout << "f(x) = " << setprecision(6) << main_function(x[0], x[1]) << endl;
-        cout << "*f(x) = (" << setprecision(6) << grad[0] << ", " << grad[1] << ")\n";
-        cout << "||*f(x)|| = " << setprecision(6) << grad_norm << endl;
+    vector<double> result = v;
+    for (double& val : result) {
+        val /= norm;
+    }
+    return result;
+}
 
-        if (grad_norm < eps1) {
-            cout << "Критерий окончания ||*f(x)|| < e1 выполнен" << endl;
-            break;
+// вычисление нормы вектора
+double vector_norma(const vector<double>& v) {
+    double norm = 0.0;
+    for (double val : v) {
+        norm += val * val;
+    }
+    return sqrt(norm);
+}
+
+// Печать вектора
+void printVector(const vector<double>& v, const string& name = "") {
+    if (!name.empty()) {
+        cout << name << " = ";
+    }
+    cout << "(";
+    for (size_t i = 0; i < v.size(); i++) {
+        cout << v[i] << (i < v.size() - 1 ? ", " : "");
+    }
+    cout << ")";
+}
+
+// основная функция метода Пауэлла
+vector<double> Paul(const function<double(const vector<double>&)>& func,
+    const vector<double>& x0,
+    double tol = 1e-6,
+    int max_iter = 1000) {
+    int n = x0.size();
+    vector<double> x = x0;
+
+    // инициализация направлений (координатные оси)
+    vector<vector<double>> directions;
+    for (int i = 0; i < n; i++) {
+        vector<double> dir(n, 0.0);
+        dir[i] = 1.0;
+        directions.push_back(dir);
+    }
+
+    cout << "Метод Пауэлла\n";
+    cout << "Целевая функция: f(x) = x1^2 + 6x2^2 + x1x2 + x1\n";
+    cout << "Начальная точка: ";
+    printVector(x0);
+    cout << ", f = " << func(x) << endl;
+    cout << "Точность: " << tol << endl << endl;
+    for (int iter = 0; iter < max_iter; iter++) {
+        vector<double> x_start = x;
+        double f_start = func(x);
+        cout << "Итерация " << iter + 1 << endl;
+        cout << "Начальная точка: ";
+        printVector(x);
+        cout << ", f = " << f_start << endl;
+
+        // минимизация вдоль каждого направления
+        for (int i = 0; i < n; i++) {
+            double lambda = golden_section(func, x, directions[i]);
+
+            // обновление точки
+            for (int j = 0; j < n; j++) {
+                x[j] += lambda * directions[i][j];
+            }
+            cout << "Шаг " << i + 1 << ": минимизация вдоль направления ";
+            printVector(directions[i]);
+            cout << endl;
+            cout << "    lambda = " << lambda;
+            cout << ", f = " << func(x);
+            cout << ", x = ";
+            printVector(x);
+            cout << endl;
         }
-        // 5) проверяем максимальное число итераций
-        if (k >= M) {
-            cout << "Достигнуто максимальное число итераций" << endl;
-            break;
+
+        // построение сопряженного направления
+        vector<double> conjugate_dir(n);
+        for (int i = 0; i < n; i++) {
+            conjugate_dir[i] = x[i] - x_start[i];
         }
 
-        vector<double> main_vec;
+        double dir_norm = vector_norma(conjugate_dir);
 
-        if (k == 0) {
-            // при k = 0 перейти к шагу 10
-            // 10) определяем направление
-            main_vec = mat_vec_mult(A, grad);
-            main_vec[0] = -main_vec[0];
-            main_vec[1] = -main_vec[1];
-        }
-        else {
-            // 6) вычислить *g^k
-            vector<double> delta_g = { grad[0] - grad_prev[0], grad[1] - grad_prev[1] };
+        cout << "  Сопряженное направление: ";
+        printVector(conjugate_dir);
+        cout << ", норма = " << dir_norm << endl;
 
-            // 7) вычислить *x^k
-            vector<double> delta_x = { x[0] - x_prev_iter[0], x[1] - x_prev_iter[1] };
+        if (dir_norm > tol) {
+            // минимизация вдоль сопряженного направления
+            vector<double> conjugate_dir_norm = normal(conjugate_dir);
+            double lambda = golden_section(func, x, conjugate_dir_norm, -2.0, 2.0);
 
-            // 8) вычислить A^k_c
-            double delta_x_dot_delta_g = skalar(delta_x, delta_g);
-            vector<double> A_delta_g = mat_vec_mult(A, delta_g);
-            double delta_g_dot_A_delta_g = skalar(delta_g, A_delta_g);
-
-            if (fabs(delta_x_dot_delta_g) > 1e-15 && fabs(delta_g_dot_A_delta_g) > 1e-15) {
-                vector<vector<double>> term1 = outer_product(delta_x, delta_x);
-                term1 = matrix_scale(term1, 1.0 / delta_x_dot_delta_g);
-
-                vector<vector<double>> term2 = outer_product(A_delta_g, A_delta_g);
-                term2 = matrix_scale(term2, 1.0 / delta_g_dot_A_delta_g);
-
-                vector<vector<double>> A_c = matrix_sub(term1, term2);
-
-                // 9) обновить матрицу A
-                A = matrix_add(A, A_c);
+            vector<double> x_new = x;
+            for (int i = 0; i < n; i++) {
+                x_new[i] += lambda * conjugate_dir_norm[i];
             }
 
-            // 10) определить направление
-            main_vec = mat_vec_mult(A, grad);
-            main_vec[0] = -main_vec[0];
-            main_vec[1] = -main_vec[1];
+            cout << "Минимизация вдоль сопряженного направления:\n";
+            cout << "    lambda = " << lambda;
+            cout << ", f = " << func(x_new);
+            cout << ", x = ";
+            printVector(x_new);
+            cout << endl;
+
+            // обновление направлений (замена первого направления)
+            directions.erase(directions.begin());
+            directions.push_back(conjugate_dir_norm);
+            x = x_new;
         }
-
-        // 11) одномерная минимизация
-        double t = golden_section(x[0], x[1], main_vec, 0.0, 1.0);
-
-        // сохраняем значения для следующей итерации
-        x_prev_iter = x;
-        grad_prev = grad;
-
-        // 12) вычислить новую точку
-        x_prev = x;
-        f_prev = main_function(x[0], x[1]);
-        x[0] = x[0] + t * main_vec[0];
-        x[1] = x[1] + t * main_vec[1];
-
-        double f_current = main_function(x[0], x[1]);
-
-        cout << "t = " << t << endl;
-        cout << "Направление: (" << main_vec[0] << ", " << main_vec[1] << ")\n";
-        cout << "Матрица A:\n";
-        cout << "[" << A[0][0] << "  " << A[0][1] << "]\n";
-        cout << "[" << A[1][0] << "  " << A[1][1] << "]\n";
-
-        // 13) проверить дополнительные критерии окончания
-        if (k >= 1) {
-            double dx_norm = norma({ x[0] - x_prev[0], x[1] - x_prev[1] });
-            double df_norm = fabs(f_current - f_prev);
-
-            cout << "||*x|| = " << dx_norm;
-            cout << ", |*f| = " << df_norm << endl;
-
-            if (dx_norm < eps2 && df_norm < eps2) {
-                cout << "Критерии ||x^(k+1) - x^k|| < e2 и |f(x^(k+1)) - f(x^k)| < e2 выполнены\n";
-                break;
-            }
+        // проверка критерия остановки
+        double diff_norm = 0.0;
+        for (int i = 0; i < n; i++) {
+            diff_norm += (x[i] - x_start[i]) * (x[i] - x_start[i]);
         }
-        cout << "----------------------------------------\n";
-        k++;
+        diff_norm = sqrt(diff_norm);
+        cout << "  Изменение точки: " << diff_norm << endl;
+        if (diff_norm < tol) {
+            cout << "\nСходимость достигнута на итерации " << iter + 1 << " !!!" << endl;
+            break;
+        }
+        if (iter == max_iter - 1) {
+            cout << "\nДостигнуто максимальное число итераций!!!" << endl;
+        }
+        cout << endl;
     }
 
     return x;
 }
 
+
+
 int main() {
     setlocale(LC_ALL, "ru");
-
-    // параметры метода
-    long double x1_0 = 1.5, x2_0 = 1.1;
-    long double eps1 = 0.1, eps2 = 0.15;
-    int M = 10;
-
-    vector<double> result = dfp_method(x1_0, x2_0, eps1, eps2, M);
-
+    // начальная точка
+    vector<double> x0 = { 1.5, 1.1 };
+    // запуск метода
+    vector<double> result = Paul(main_function, x0, 1e-6, 100);
     // вывод результатов
-    cout << "\nИтоговые результаты:\n";
-    cout << "Точка минимума: (" << result[0]
-        << ", " << result[1] << ")\n";
-    cout << "Значение функции: " << main_function(result[0], result[1]) << endl;
-
-    vector<double> final_grad = gradient(result[0], result[1]);
-    cout << "Градиент: (" << final_grad[0]
-        << ", " << final_grad[1] << ")" << endl;
-    cout << "Норма градиента: " << norma(final_grad) << endl;
-
-    // аналитическое решение для проверки
-    long double x1_analytical = -12.0 / 23.0;
-    long double x2_analytical = 1.0 / 23.0;
-    cout << endl << "Аналитическое решение:" << endl;
-    cout << "x1* = " << x1_analytical << endl;
-    cout << "x2* = " << x2_analytical << endl;
-    cout << "f(x*) = " << main_function(x1_analytical, x2_analytical) << endl;
-
+    cout << "\nФинальный результат:" << endl;
+    cout << "Найденный минимум: ";
+    printVector(result);
+    cout << endl;
+    cout << "Значение функции в минимуме: f(x) = " << main_function(result) << endl;
     return 0;
 }
