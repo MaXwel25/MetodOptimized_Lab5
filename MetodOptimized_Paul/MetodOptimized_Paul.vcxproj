@@ -125,6 +125,10 @@
   <ItemGroup>
     <ClCompile Include="MetodOptimized_Paul.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Paull.h" />
+    <ClInclude Include="Pollak.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

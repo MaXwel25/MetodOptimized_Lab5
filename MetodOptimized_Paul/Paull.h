@@ -1,15 +1,16 @@
-п»ї#include <iostream>
+#pragma once
+
+#include <iostream>
 #include <vector>
 #include <cmath>
-#include <functional>
 using namespace std;
 
-// С†РµР»РµРІР°СЏ С„СѓРЅРєС†РёСЏ: f(x) = x1^2 + 6x2^2 + x1x2 + x1
+// целевая функция: f(x) = x1^2 + 6x2^2 + x1x2 + x1
 double main_function(const vector<double>& x) {
     return x[0] * x[0] + 6 * x[1] * x[1] + x[0] * x[1] + x[0];
-} 
+}
 
-// РѕРґРЅРѕРјРµСЂРЅС‹Р№ РїРѕРёСЃРє РјРµС‚РѕРґРѕРј Р·РѕР»РѕС‚РѕРіРѕ СЃРµС‡РµРЅРёСЏ
+// одномерный поиск методом золотого сечения
 double golden_section(const function<double(const vector<double>&)>& func,
     const vector<double>& x0,
     const vector<double>& direction,
@@ -21,7 +22,7 @@ double golden_section(const function<double(const vector<double>&)>& func,
     double c = b - phi * (b - a);
     double d = a + phi * (b - a);
 
-    auto pointAlongDirection = [&](double lambda) {
+    auto point = [&](double lambda) {
         vector<double> x = x0;
         for (int i = 0; i < n; i++) {
             x[i] += lambda * direction[i];
@@ -29,8 +30,8 @@ double golden_section(const function<double(const vector<double>&)>& func,
         return func(x);
         };
 
-    double fc = pointAlongDirection(c);
-    double fd = pointAlongDirection(d);
+    double fc = point(c);
+    double fd = point(d);
 
     while (abs(b - a) > eps) {
         if (fc < fd) {
@@ -38,20 +39,20 @@ double golden_section(const function<double(const vector<double>&)>& func,
             d = c;
             fd = fc;
             c = b - phi * (b - a);
-            fc = pointAlongDirection(c);
+            fc = point(c);
         }
         else {
             a = c;
             c = d;
             fc = fd;
             d = a + phi * (b - a);
-            fd = pointAlongDirection(d);
+            fd = point(d);
         }
     }
     return (a + b) / 2.0;
 }
 
-// РЅРѕСЂРјР°Р»РёР·Р°С†РёСЏ РІРµРєС‚РѕСЂР°
+// нормализация вектора
 vector<double> normal(const vector<double>& v) {
     int n = v.size();
     double norm = 0.0;
@@ -69,7 +70,7 @@ vector<double> normal(const vector<double>& v) {
     return result;
 }
 
-// РІС‹С‡РёСЃР»РµРЅРёРµ РЅРѕСЂРјС‹ РІРµРєС‚РѕСЂР°
+// вычисление нормы вектора
 double vector_norma(const vector<double>& v) {
     double norm = 0.0;
     for (double val : v) {
@@ -78,8 +79,8 @@ double vector_norma(const vector<double>& v) {
     return sqrt(norm);
 }
 
-// РџРµС‡Р°С‚СЊ РІРµРєС‚РѕСЂР°
-void printVector(const vector<double>& v, const string& name = "") {
+// Печать вектора
+void print_vector_paul(const vector<double>& v, const string& name = "") {
     if (!name.empty()) {
         cout << name << " = ";
     }
@@ -90,7 +91,7 @@ void printVector(const vector<double>& v, const string& name = "") {
     cout << ")";
 }
 
-// РѕСЃРЅРѕРІРЅР°СЏ С„СѓРЅРєС†РёСЏ РјРµС‚РѕРґР° РџР°СѓСЌР»Р»Р°
+// основная функция метода Пауэлла
 vector<double> Paul(const function<double(const vector<double>&)>& func,
     const vector<double>& x0,
     double tol = 1e-6,
@@ -98,7 +99,7 @@ vector<double> Paul(const function<double(const vector<double>&)>& func,
     int n = x0.size();
     vector<double> x = x0;
 
-    // РёРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РЅР°РїСЂР°РІР»РµРЅРёР№ (РєРѕРѕСЂРґРёРЅР°С‚РЅС‹Рµ РѕСЃРё)
+    // инициализация направлений (координатные оси)
     vector<vector<double>> directions;
     for (int i = 0; i < n; i++) {
         vector<double> dir(n, 0.0);
@@ -106,39 +107,39 @@ vector<double> Paul(const function<double(const vector<double>&)>& func,
         directions.push_back(dir);
     }
 
-    cout << "РњРµС‚РѕРґ РџР°СѓСЌР»Р»Р°\n";
-    cout << "Р¦РµР»РµРІР°СЏ С„СѓРЅРєС†РёСЏ: f(x) = x1^2 + 6x2^2 + x1x2 + x1\n";
-    cout << "РќР°С‡Р°Р»СЊРЅР°СЏ С‚РѕС‡РєР°: ";
-    printVector(x0);
+    cout << "Метод Пауэлла\n";
+    cout << "Целевая функция: f(x) = x1^2 + 6x2^2 + x1x2 + x1\n";
+    cout << "Начальная точка: ";
+    print_vector_paul(x0);
     cout << ", f = " << func(x) << endl;
-    cout << "РўРѕС‡РЅРѕСЃС‚СЊ: " << tol << endl << endl;
+    cout << "Точность: " << tol << endl << endl;
     for (int iter = 0; iter < max_iter; iter++) {
         vector<double> x_start = x;
         double f_start = func(x);
-        cout << "РС‚РµСЂР°С†РёСЏ " << iter + 1 << endl;
-        cout << "РќР°С‡Р°Р»СЊРЅР°СЏ С‚РѕС‡РєР°: ";
-        printVector(x);
+        cout << "Итерация " << iter + 1 << endl;
+        cout << "Начальная точка: ";
+        print_vector_paul(x);
         cout << ", f = " << f_start << endl;
 
-        // РјРёРЅРёРјРёР·Р°С†РёСЏ РІРґРѕР»СЊ РєР°Р¶РґРѕРіРѕ РЅР°РїСЂР°РІР»РµРЅРёСЏ
+        // минимизация вдоль каждого направления
         for (int i = 0; i < n; i++) {
             double lambda = golden_section(func, x, directions[i]);
 
-            // РѕР±РЅРѕРІР»РµРЅРёРµ С‚РѕС‡РєРё
+            // обновление точки
             for (int j = 0; j < n; j++) {
                 x[j] += lambda * directions[i][j];
             }
-            cout << "РЁР°Рі " << i + 1 << ": РјРёРЅРёРјРёР·Р°С†РёСЏ РІРґРѕР»СЊ РЅР°РїСЂР°РІР»РµРЅРёСЏ ";
-            printVector(directions[i]);
+            cout << "Шаг " << i + 1 << ": минимизация вдоль направления ";
+            print_vector_paul(directions[i]);
             cout << endl;
             cout << "    lambda = " << lambda;
             cout << ", f = " << func(x);
             cout << ", x = ";
-            printVector(x);
+            print_vector_paul(x);
             cout << endl;
         }
 
-        // РїРѕСЃС‚СЂРѕРµРЅРёРµ СЃРѕРїСЂСЏР¶РµРЅРЅРѕРіРѕ РЅР°РїСЂР°РІР»РµРЅРёСЏ
+        // построение сопряженного направления
         vector<double> conjugate_dir(n);
         for (int i = 0; i < n; i++) {
             conjugate_dir[i] = x[i] - x_start[i];
@@ -146,12 +147,12 @@ vector<double> Paul(const function<double(const vector<double>&)>& func,
 
         double dir_norm = vector_norma(conjugate_dir);
 
-        cout << "  РЎРѕРїСЂСЏР¶РµРЅРЅРѕРµ РЅР°РїСЂР°РІР»РµРЅРёРµ: ";
-        printVector(conjugate_dir);
-        cout << ", РЅРѕСЂРјР° = " << dir_norm << endl;
+        cout << "  Сопряженное направление: ";
+        print_vector_paul(conjugate_dir);
+        cout << ", норма = " << dir_norm << endl;
 
         if (dir_norm > tol) {
-            // РјРёРЅРёРјРёР·Р°С†РёСЏ РІРґРѕР»СЊ СЃРѕРїСЂСЏР¶РµРЅРЅРѕРіРѕ РЅР°РїСЂР°РІР»РµРЅРёСЏ
+            // минимизация вдоль сопряженного направления
             vector<double> conjugate_dir_norm = normal(conjugate_dir);
             double lambda = golden_section(func, x, conjugate_dir_norm, -2.0, 2.0);
 
@@ -160,51 +161,34 @@ vector<double> Paul(const function<double(const vector<double>&)>& func,
                 x_new[i] += lambda * conjugate_dir_norm[i];
             }
 
-            cout << "РњРёРЅРёРјРёР·Р°С†РёСЏ РІРґРѕР»СЊ СЃРѕРїСЂСЏР¶РµРЅРЅРѕРіРѕ РЅР°РїСЂР°РІР»РµРЅРёСЏ:\n";
+            cout << "Минимизация вдоль сопряженного направления:\n";
             cout << "    lambda = " << lambda;
             cout << ", f = " << func(x_new);
             cout << ", x = ";
-            printVector(x_new);
+            print_vector_paul(x_new);
             cout << endl;
 
-            // РѕР±РЅРѕРІР»РµРЅРёРµ РЅР°РїСЂР°РІР»РµРЅРёР№ (Р·Р°РјРµРЅР° РїРµСЂРІРѕРіРѕ РЅР°РїСЂР°РІР»РµРЅРёСЏ)
+            // обновление направлений (замена первого направления)
             directions.erase(directions.begin());
             directions.push_back(conjugate_dir_norm);
             x = x_new;
         }
-        // РїСЂРѕРІРµСЂРєР° РєСЂРёС‚РµСЂРёСЏ РѕСЃС‚Р°РЅРѕРІРєРё
+        // проверка критерия остановки
         double diff_norm = 0.0;
         for (int i = 0; i < n; i++) {
             diff_norm += (x[i] - x_start[i]) * (x[i] - x_start[i]);
         }
         diff_norm = sqrt(diff_norm);
-        cout << "  РР·РјРµРЅРµРЅРёРµ С‚РѕС‡РєРё: " << diff_norm << endl;
+        cout << "  Изменение точки: " << diff_norm << endl;
         if (diff_norm < tol) {
-            cout << "\nРЎС…РѕРґРёРјРѕСЃС‚СЊ РґРѕСЃС‚РёРіРЅСѓС‚Р° РЅР° РёС‚РµСЂР°С†РёРё " << iter + 1 << " !!!" << endl;
+            cout << "\nСходимость достигнута на итерации " << iter + 1 << " !!!" << endl;
             break;
         }
         if (iter == max_iter - 1) {
-            cout << "\nР”РѕСЃС‚РёРіРЅСѓС‚Рѕ РјР°РєСЃРёРјР°Р»СЊРЅРѕРµ С‡РёСЃР»Рѕ РёС‚РµСЂР°С†РёР№!!!" << endl;
+            cout << "\nДостигнуто максимальное число итераций!!!" << endl;
         }
         cout << endl;
     }
 
     return x;
-}
-
-
-
-int main() {
-    setlocale(LC_ALL, "ru");
-    // РЅР°С‡Р°Р»СЊРЅР°СЏ С‚РѕС‡РєР°
-    vector<double> x0 = { 1.5, 1.1 };
-    // Р·Р°РїСѓСЃРє РјРµС‚РѕРґР°
-    vector<double> result = Paul(main_function, x0, 1e-6, 100);
-    // РІС‹РІРѕРґ СЂРµР·СѓР»СЊС‚Р°С‚РѕРІ
-    cout << "\nР¤РёРЅР°Р»СЊРЅС‹Р№ СЂРµР·СѓР»СЊС‚Р°С‚:" << endl;
-    cout << "РќР°Р№РґРµРЅРЅС‹Р№ РјРёРЅРёРјСѓРј: ";
-    printVector(result);
-    cout << endl;
-    cout << "Р—РЅР°С‡РµРЅРёРµ С„СѓРЅРєС†РёРё РІ РјРёРЅРёРјСѓРјРµ: f(x) = " << main_function(result) << endl;
-    return 0;
 }
